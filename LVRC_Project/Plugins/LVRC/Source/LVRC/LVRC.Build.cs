@@ -38,6 +38,7 @@ public class LVRC : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"HeadMountedDisplay",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
