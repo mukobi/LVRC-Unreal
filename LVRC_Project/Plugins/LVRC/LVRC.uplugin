@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0",
-	"FriendlyName": "LVRC",
+	"FriendlyName": "Lambda Virtual Reality Core",
 	"Description": "Lambda Virtual Reality Core (LVRC) implements core VR systems so your VR project can hit the ground running with solid fundementals",
 	"Category": "Other",
 	"CreatedBy": "LVRC Project",
