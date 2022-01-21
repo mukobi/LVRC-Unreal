@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "LVRC",
+	"Description": "Lambda Virtual Reality Core (LVRC) implements core VR systems so your VR project can hit the ground running with solid fundementals",
+	"Category": "Other",
+	"CreatedBy": "LVRC Project",
+	"CreatedByURL": "https://github.com/mukobi/LVRC-Unreal",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "LVRC",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
