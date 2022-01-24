@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "LVRCCharacter.generated.h"
+#include "LVRCPawn.generated.h"
 
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -15,7 +15,7 @@ class UAnimMontage;
 class USoundBase;
 
 UCLASS(config=Game)
-class ALVRCCharacter : public ACharacter
+class ALVRCPawn : public APawn
 {
 	GENERATED_BODY()
 
@@ -32,7 +32,7 @@ class ALVRCCharacter : public ACharacter
 	UMotionControllerComponent* L_MotionController;
 
 public:
-	ALVRCCharacter();
+	ALVRCPawn();
 
 public:
 	/** Whether to use motion controller location for aiming. */
