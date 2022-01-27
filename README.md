@@ -5,11 +5,10 @@ Implementing the character controller, interaction system, and hand presence fro
 
 TODO
 
+
 ## Installation
 
 TODO
-
-
 
 
 ## Coding Style and Naming Conventions
@@ -25,4 +24,4 @@ Thanks to the following projects, groups, and people who made this possible:
 - [Nimso Ny](https://www.youtube.com/user/nimsony) for [analysing many of Alyx's mechanics](https://www.youtube.com/playlist?list=PLoLkfS-a4sd3U8DRe89ndDBUfzr4tDUdS)
 - https://github.com/ProjectBorealis/UEGitPlugin for locking VCS within Unreal
 - [Epic Games](https://www.epicgames.com) and the [Unreal Engine](https://www.unrealengine.com)
-- Stanford XR
+- [Stanford XR](https://www.stanfordxr.org/)
