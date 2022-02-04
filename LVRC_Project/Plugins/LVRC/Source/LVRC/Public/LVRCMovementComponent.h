@@ -26,7 +26,7 @@ class LVRC_API ULVRCMovementComponent : public UPawnMovementComponent
 
 public:
 	/** Try to smoothly walk in the specified direction. Performs movement validation and correction. */
-	void TryContinuousLocomotion(FVector2D Direction);
+	void TryContinuousLocomotion(FVector2D Direction, float DeltaTime);
 
 	/** Whether the pawn is currently virtual moving (i.e. continuous locomotion or teleportation) this frame. */
 	bool IsVirtuallyMoving() const
@@ -35,6 +35,7 @@ public:
 	}
 
 	/** Sets the internal walking speed based on whether the pawn should be moving fast (e.g. in combat) or not. */
+	UFUNCTION(BlueprintCallable)
 	void SetCurrentWalkingSpeed(const bool bIsFast)
 	{
 		CurrentWalkingSpeed = bIsFast ? WalkSpeedFast : WalkSpeedDefault;

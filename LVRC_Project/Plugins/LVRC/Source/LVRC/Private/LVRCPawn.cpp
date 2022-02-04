@@ -7,6 +7,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/InputSettings.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "LVRCMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
@@ -18,24 +19,18 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
 ALVRCPawn::ALVRCPawn()
 {
-	// Set size for collision capsule
-	// GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
+	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("CapsuleCollision");
+	CapsuleComponent->InitCapsuleSize(34.0f, 88.0f);
+	CapsuleComponent->SetCollisionProfileName(UCollisionProfile::Pawn_ProfileName);
 
-	// Create a CameraComponent	
-	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->SetupAttachment(GetRootComponent());
-	// FirstPersonCameraComponent->SetRelativeLocation(FVector(-39.56f, 1.75f, 64.f)); // Position the camera
-	FirstPersonCameraComponent->bUsePawnControlRotation = true;
+	CapsuleComponent->CanCharacterStepUpOn = ECB_No;
+	CapsuleComponent->SetShouldUpdatePhysicsVolume(true);
+	CapsuleComponent->SetCanEverAffectNavigation(false);
+	CapsuleComponent->bDynamicObstacle = true;
+	RootComponent = CapsuleComponent;
 
-	// Create VR Controllers.
-	R_MotionController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("R_MotionController"));
-	R_MotionController->MotionSource = FXRMotionControllerBase::RightHandSourceId;
-	R_MotionController->SetupAttachment(RootComponent);
-	L_MotionController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("L_MotionController"));
-	L_MotionController->SetupAttachment(RootComponent);
-
-	// Turn motion controllers on by default:
-	bUsingMotionControllers = true;
+	MovementComponent = CreateDefaultSubobject<ULVRCMovementComponent>(TEXT("LVRCMovementComponent"));
+	MovementComponent->UpdatedComponent = CapsuleComponent;
 }
 
 //////////////////////////////////////////////////////////////////////////
