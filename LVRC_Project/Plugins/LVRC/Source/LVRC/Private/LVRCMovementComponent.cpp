@@ -6,8 +6,6 @@
 void ULVRCMovementComponent::TryContinuousLocomotion(FVector2D Direction, float DeltaTime)
 {
 	Velocity = FVector(Direction.X, Direction.Y, 0) * CurrentWalkingSpeed;
-	GEngine->AddOnScreenDebugMessage(-1, 12.f, FColor::Green,
-		FString::Printf(TEXT("Velocity: %f %f"), Velocity.X, Velocity.Y));
 
 	const FVector delta = Velocity * DeltaTime;
 
