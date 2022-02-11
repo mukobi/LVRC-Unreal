@@ -8,6 +8,7 @@
 #include "GameFramework/InputSettings.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "LVRCMovementComponent.h"
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 
@@ -17,7 +18,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 // ALVRCCharacter
 
 ALVRCCharacter::ALVRCCharacter(const FObjectInitializer& ObjectInitializer)
-	: ACharacter(ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<ULVRCMovementComponent>(CharacterMovementComponentName))
 {
 	VROrigin = CreateDefaultSubobject<USceneComponent>(TEXT("VR Origin"));
 	VROrigin->SetupAttachment(RootComponent);
@@ -25,6 +26,10 @@ ALVRCCharacter::ALVRCCharacter(const FObjectInitializer& ObjectInitializer)
 	
 	VRCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("VR Camera"));
 	VRCamera->SetupAttachment(VROrigin);
+
+	ULVRCMovementComponent* LVRCMovementComponent = Cast<ULVRCMovementComponent>(GetCharacterMovement());
+	LVRCMovementComponent->SetVROriginComponent(VROrigin);
+	LVRCMovementComponent->SetCameraComponent(VRCamera);
 }
 
 //////////////////////////////////////////////////////////////////////////
