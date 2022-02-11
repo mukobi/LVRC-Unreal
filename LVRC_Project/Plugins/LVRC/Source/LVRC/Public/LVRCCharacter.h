@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "LVRCPawn.generated.h"
+#include "LVRCCharacter.generated.h"
 
 class ULVRCMovementComponent;
 class UInputComponent;
@@ -16,20 +16,20 @@ class UAnimMontage;
 class USoundBase;
 
 UCLASS(config=Game)
-class ALVRCPawn : public APawn
+class ALVRCCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
-	/** The CapsuleComponent being used for movement collision (by CharacterMovement). Always treated as being vertically aligned in simple collision check functions. */
+	/** The offset from the center of the capsule used to position the VR camera. Z-loc should equal -1 8 capsule half-height. */
 	UPROPERTY(Category=Character, VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	UCapsuleComponent* CapsuleComponent;
-
-	/** Movement component used for movement logic in various movement modes (walking, falling, etc), containing relevant settings and functions to control movement. */
+	USceneComponent* VROrigin;
+	
+	/** The VR camera, automatically tracked with OpenXR */
 	UPROPERTY(Category=Character, VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	ULVRCMovementComponent* MovementComponent;
+	UCameraComponent* VRCamera;
 
 public:
-	ALVRCPawn();
+	ALVRCCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	/** Resets HMD orientation and position in VR. */
