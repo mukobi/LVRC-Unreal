@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "LVRCCharacter.h"
 #include "Components/ActorComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "LVRCMovementComponent.generated.h"
@@ -26,52 +27,52 @@ class LVRC_API ULVRCMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
 
-private:
-	/** The VR origin, updated when syncing misalignments between the updated component and camera. */
-	UPROPERTY()
-	USceneComponent* VROriginComponent;
-	
-	/** The player camera, needed for some movement validation routines. */
-	UPROPERTY()
-	USceneComponent* CameraComponent;
-
 public:
 	// Sets default values for this component's properties
 	ULVRCMovementComponent(const FObjectInitializer& ObjectInitializer);
 
-protected:
-	// Called when the game starts
+public:
+	// Configurable Settings
+
+	/** Offset from the HMD tracked position to use for the top of the capsule component. */
+	UPROPERTY(EditDefaultsOnly)
+	float CapsuleHeightOffset = 10.0f;
+
+	// BlueprintCallable Interface
+
+	/** Updates the capsule component's position as well as the position of the HMD (camera) to be in sync. */
+	UFUNCTION(BlueprintCallable)
+	void UpdateCapsulePositionToHMD() const;
+
+	/** Matches the capsule component's height to the HMD and offsets the VROrigin to be in sync. */
+	UFUNCTION(BlueprintCallable)
+	void UpdateCapsuleHeightToHMD() const;
+
+	// Interface Implementations
+
+	//~ Begin UActorComponent Interface
 	virtual void BeginPlay() override;
+	virtual void PostLoad() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
+	                           FActorComponentTickFunction* ThisTickFunction) override;
+	//~ End UActorComponent Interface
+
+protected:
 
 	/** Whether movement due to continuous locomotion is happening this frame. */
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsPerformingContinuousLocomotion = false;
 
-public:
-	void SetVROriginComponent(USceneComponent* InVROriginComponent)
-	{
-		VROriginComponent = InVROriginComponent;
-	}
-	
-	void SetCameraComponent(USceneComponent* InCameraComponent)
-	{
-		CameraComponent = InCameraComponent;
-	}
-
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	                           FActorComponentTickFunction* ThisTickFunction) override;
-
 private:
-	/** Updates the capsule components position and height as well as the position of the HMD (camera) to be in sync. */
-	void UpdateCapsuleToFollowHMD() const;
-
 	/**
 	 * Handle the beginning of continuous locomotion when no previous locomotion was happening last tick. Does things
 	 * like validating the current HMD location and sweeping the player capsule to the HMD location .
 	 */
 	void BeginContinuousLocomotion();
+	
+	/** LVRC Character this movement component belongs to */
+	UPROPERTY(Transient, DuplicateTransient)
+	ALVRCCharacter* LVRCCharacterOwner;
 
-private:
 	FVector PreviousTickInputVector;
 };

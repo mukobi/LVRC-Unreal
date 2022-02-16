@@ -22,14 +22,17 @@ ALVRCCharacter::ALVRCCharacter(const FObjectInitializer& ObjectInitializer)
 {
 	VROrigin = CreateDefaultSubobject<USceneComponent>(TEXT("VR Origin"));
 	VROrigin->SetupAttachment(RootComponent);
-	VROrigin->AddLocalOffset(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
-	
+	MatchVROriginOffsetToCapsuleHalfHeight();
+
 	VRCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("VR Camera"));
 	VRCamera->SetupAttachment(VROrigin);
+}
 
-	ULVRCMovementComponent* LVRCMovementComponent = Cast<ULVRCMovementComponent>(GetCharacterMovement());
-	LVRCMovementComponent->SetVROriginComponent(VROrigin);
-	LVRCMovementComponent->SetCameraComponent(VRCamera);
+void ALVRCCharacter::MatchVROriginOffsetToCapsuleHalfHeight()
+{
+	const FVector RelativeLocation = VROrigin->GetRelativeLocation();
+	VROrigin->SetRelativeLocation(FVector(RelativeLocation.X, RelativeLocation.Y,
+	                                      -GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 }
 
 //////////////////////////////////////////////////////////////////////////

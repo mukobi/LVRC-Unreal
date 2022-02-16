@@ -12,14 +12,15 @@ class USkeletalMeshComponent;
 class USceneComponent;
 class UCameraComponent;
 class UMotionControllerComponent;
-class UAnimMontage;
-class USoundBase;
 
 UCLASS(config=Game)
 class ALVRCCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+private:
+	// Components //
+	
 	/** The offset from the center of the capsule used to position the VR camera. Z-loc should equal -1 8 capsule half-height. */
 	UPROPERTY(Category=Character, VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	USceneComponent* VROrigin;
@@ -31,6 +32,16 @@ class ALVRCCharacter : public ACharacter
 public:
 	ALVRCCharacter(const FObjectInitializer& ObjectInitializer);
 
+	UFUNCTION()
+	USceneComponent* GetVROrigin() const { return VROrigin; }
+	
+	UFUNCTION()
+	UCameraComponent* GetVRCamera() const { return VRCamera; }
+
+	/** Updates the Z component of the VR origin to equal the negative capsule half height so it's on the ground. */
+	UFUNCTION(BlueprintCallable)
+	void MatchVROriginOffsetToCapsuleHalfHeight();
+
 protected:
 	/** Resets HMD orientation and position in VR. */
 	void OnResetVR();
@@ -40,3 +51,4 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
 };
+
