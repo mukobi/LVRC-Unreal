@@ -58,7 +58,6 @@ public:
 	//~ End UActorComponent Interface
 
 protected:
-
 	/** Whether movement due to continuous locomotion is happening this frame. */
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsPerformingContinuousLocomotion = false;
@@ -66,13 +65,27 @@ protected:
 private:
 	/**
 	 * Handle the beginning of continuous locomotion when no previous locomotion was happening last tick. Does things
-	 * like validating the current HMD location and sweeping the player capsule to the HMD location .
+	 * like validating if the capsule would be unblocked at the current HMD location and sweeping the player capsule
+	 * to the HMD location if it would be blocked to find a valid place to pop the player out.
 	 */
-	void BeginContinuousLocomotion();
-	
+	void BeginContinuousLocomotion() const;
+
 	/** LVRC Character this movement component belongs to */
 	UPROPERTY(Transient, DuplicateTransient)
 	ALVRCCharacter* LVRCCharacterOwner;
 
 	FVector PreviousTickInputVector;
+
+
+	/**
+	 * Objects that you aren't allowed to overlap with, such as static level geometry and large physics objects.
+	 * Note: You may be able to "move" through these with virtual movement validation after real moving through them.
+	 */
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TEnumAsByte<EObjectTypeQuery>> LocomotionBlockingObjectTypes = {ObjectTypeQuery1};
+	
+	/** Objects that you should never be allowed to move through, like level bounds and gameplay barriers. */
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TEnumAsByte<EObjectTypeQuery>> ImpassibleObjectTypes = {ObjectTypeQuery1};
 };
+
