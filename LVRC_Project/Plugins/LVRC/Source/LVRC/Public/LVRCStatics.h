@@ -19,6 +19,7 @@ class LVRC_API ULVRCStatics : public UBlueprintFunctionLibrary
 	 * 
 	 * @param PathPositions Predicted projectile path. Ordered series of positions from StartPos to the end. Includes location at point of impact if it hit something.
 	 * @param OutHit Predicted hit result, if the projectile will hit something.
+	 * @param WorldContextObject World context object.
 	 * @param StartLocation First start trace location.
 	 * @param LaunchVelocity Velocity the "virtual projectile" is launched at.
 	 * @param ObjectTypes ObjectTypes to trace against.
@@ -35,10 +36,12 @@ class LVRC_API ULVRCStatics : public UBlueprintFunctionLibrary
 	 * @return True if hit something along the path.
 	 */
 	static bool PredictProjectilePathPointDrag(
-		TArray<FVector>& PathPositions, FHitResult& OutHit, const FVector StartLocation, const FVector LaunchVelocity,
+		TArray<FVector>& PathPositions, FHitResult& OutHit, const UObject* WorldContextObject,
+		const FVector StartLocation, const FVector LaunchVelocity,
 		const TArray<TEnumAsByte<EObjectTypeQuery>>& ObjectTypes, const TArray<AActor*>& ActorsToIgnore,
-		float DragCoefficient = 0.0f, float GravityZ = 98.0f, const float MaxSimTime = 2.0f, uint8 NumSubsteps = 15,
-		bool bTraceComplex = false, EDrawDebugTrace::Type DrawDebugType = EDrawDebugTrace::Type::None,
-		FLinearColor TraceColor = FLinearColor::Red, FLinearColor TraceHitColor = FLinearColor::Green,
-		float DrawDebugTime = 0.0f);
+		const float DragCoefficient = 0.0f, const float GravityZ = -98.0f, const float MaxSimTime = 2.0f,
+		const uint8 NumSubsteps = 15, const bool bTraceComplex = false,
+		const EDrawDebugTrace::Type DrawDebugType = EDrawDebugTrace::Type::None,
+		const FLinearColor TraceColor = FLinearColor::Red, const FLinearColor TraceHitColor = FLinearColor::Green,
+		const float DrawDebugTime = 0.0f);
 };
