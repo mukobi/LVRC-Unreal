@@ -7,7 +7,7 @@ bool ULVRCStatics::PredictProjectilePathPointDrag(
 	TArray<FVector>& PathPositions, FHitResult& OutHit,
 	const UObject* WorldContextObject, const FVector StartLocation, const FVector LaunchVelocity,
 	const TArray<TEnumAsByte<EObjectTypeQuery>>& ObjectTypes, const TArray<AActor*>& ActorsToIgnore,
-	float DragCoefficient, float GravityZ,
+	float DragDampingFactor, float GravityZ,
 	const float MaxSimTime, uint8 NumSubsteps, bool bTraceComplex, EDrawDebugTrace::Type DrawDebugType,
 	const FLinearColor TraceColor, const FLinearColor TraceHitColor, const float DrawDebugTime)
 {
@@ -32,8 +32,8 @@ bool ULVRCStatics::PredictProjectilePathPointDrag(
 
 			// Integrate (modified Velocity Verlet method, see https://web.physics.wustl.edu/~wimd/topic01.pdf)
 			TraceStart = TraceEnd;
-			FVector Acceleration = FVector(0.f, 0.f, GravityZ)
-				+ DragCoefficient * -CurrentVel.GetUnsafeNormal();
+			FVector Acceleration = FVector(0.f, 0.f, GravityZ);
+			CurrentVel *= DragDampingFactor;
 			CurrentVel = CurrentVel + Acceleration * ActualStepDeltaTime;
 			TraceEnd = TraceStart + (CurrentVel * ActualStepDeltaTime)
 				+ (0.5 * Acceleration * ActualStepDeltaTime * ActualStepDeltaTime);

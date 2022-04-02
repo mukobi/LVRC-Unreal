@@ -25,7 +25,7 @@ public:
 	 * @param LaunchVelocity Velocity the "virtual projectile" is launched at.
 	 * @param ObjectTypes ObjectTypes to trace against.
 	 * @param ActorsToIgnore Actors to exclude from the traces.
-	 * @param DragCoefficient Coefficient multiplied by the square of velocity to generate the drag force.
+	 * @param DragDampingFactor Coefficient multiplied by the square of velocity to generate the drag force.
 	 * @param GravityZ Gravity force.
 	 * @param MaxSimTime Maximum simulation time for the virtual projectile.
 	 * @param NumSubsteps How many sub-steps to use in the simulation (chopping up MaxSimTime). Recommended between 10 to 30 depending on desired quality versus performance.
@@ -40,7 +40,7 @@ public:
 		TArray<FVector>& PathPositions, FHitResult& OutHit, const UObject* WorldContextObject,
 		const FVector StartLocation, const FVector LaunchVelocity,
 		const TArray<TEnumAsByte<EObjectTypeQuery>>& ObjectTypes, const TArray<AActor*>& ActorsToIgnore,
-		const float DragCoefficient = 0.0f, const float GravityZ = -98.0f, const float MaxSimTime = 2.0f,
+		const float DragDampingFactor = 0.9f, const float GravityZ = -98.0f, const float MaxSimTime = 2.0f,
 		const uint8 NumSubsteps = 15, const bool bTraceComplex = false,
 		const EDrawDebugTrace::Type DrawDebugType = EDrawDebugTrace::Type::None,
 		const FLinearColor TraceColor = FLinearColor::Red, const FLinearColor TraceHitColor = FLinearColor::Green,

@@ -79,7 +79,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	checkSlow(TraceStartDirection.IsNormalized());
 
 	// Limit the start direction to a maximum vertical angle
-	const float MaxAngleZ = FMath::Sin(TeleportArcMaxVerticalAngle);
+	const float MaxAngleZ = FMath::Sin(FMath::DegreesToRadians(TeleportArcMaxVerticalAngle));
 	TraceStartDirection.Z = FMath::Min(TraceStartDirection.Z, MaxAngleZ);
 	TraceStartDirection.Normalize();
 
@@ -88,7 +88,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	FHitResult ArcHit;
 	ULVRCStatics::PredictProjectilePathPointDrag(
 		ArcTracePositions, ArcHit, this, TraceStartPosition, TraceStartDirection * TeleportArcInitialSpeed,
-		LocomotionBlockingObjectTypes, {}, TeleportArcDragCoefficient, -98, TeleportArcMaxSimTime, TeleportArcNumSubsteps, false,
+		LocomotionBlockingObjectTypes, {}, TeleportArcDampingFactor, -98, TeleportArcMaxSimTime, TeleportArcNumSubsteps, false,
 		EDrawDebugTrace::Type::ForOneFrame);
 
 	ValidatedArcPositions = ArcTracePositions;

@@ -46,9 +46,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportArcInitialSpeed = 100.0f;
 	
-	/** Drag coefficient of the simulated projectile teleport arc. */
-	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
-	float TeleportArcDragCoefficient = 2.0f;
+	/** Damping factor used to fake drag on the simulated projectile teleport arc. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation", meta=(ClampMin=0.0f, ClampMax=1.0f))
+	float TeleportArcDampingFactor = 2.0f;
 
 	/** Maximum simulation time of the simulated projectile teleport arc. */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
