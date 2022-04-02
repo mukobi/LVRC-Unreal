@@ -28,6 +28,11 @@ ALVRCCharacter::ALVRCCharacter(const FObjectInitializer& ObjectInitializer)
 	VRCamera->SetupAttachment(VROrigin);
 }
 
+ULVRCMovementComponent* ALVRCCharacter::GetLVRCMovementComponent() const
+{
+	return Cast<ULVRCMovementComponent>(GetMovementComponent());
+}
+
 void ALVRCCharacter::MatchVROriginOffsetToCapsuleHalfHeight()
 {
 	const FVector RelativeLocation = VROrigin->GetRelativeLocation();

@@ -12,7 +12,8 @@ UCLASS()
 class LVRC_API ULVRCStatics : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
-
+	
+public:
 	/**
 	 * @brief Similar to a simplified UGameplayStatics::PredictProjectilePath, but for a point (0 radius) with air resistance.
 	 * Used for predicting the teleport arc in ULVRCMovementComponent::TODO

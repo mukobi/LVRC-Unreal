@@ -32,11 +32,14 @@ private:
 public:
 	ALVRCCharacter(const FObjectInitializer& ObjectInitializer);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	USceneComponent* GetVROrigin() const { return VROrigin; }
 	
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	UCameraComponent* GetVRCamera() const { return VRCamera; }
+	
+	UFUNCTION(BlueprintCallable)
+	ULVRCMovementComponent* GetLVRCMovementComponent() const;
 
 	/** Updates the Z component of the VR origin to equal the negative capsule half height so it's on the ground. */
 	UFUNCTION(BlueprintCallable)

@@ -50,6 +50,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportArcDragCoefficient = 2.0f;
 
+	/** Maximum simulation time of the simulated projectile teleport arc. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float TeleportArcMaxSimTime = 4.0f;
+	
+	/** How many sub-steps to use in the simulation (chopping up TeleportArcMaxSimTime). */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	int TeleportArcNumSubsteps = 32;
+
 	// BlueprintCallable Interface
 
 	/** Updates the capsule component's position as well as the position of the HMD (camera) to be in sync. */
@@ -75,7 +83,7 @@ public:
 	 * @param StepPositions The sequence of validated step ground positions leading to the ValidatedDestination.
 	 * @param IsLethal Whether this teleport would kill the play (i.e. from a fall or landing in a kill volume).
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, BlueprintPure=false)
 	void CalculateTeleportationParameters(
 		FVector TraceStartPosition, FVector TraceStartDirection, FVector& ValidatedDestination,
 		FVector& ProjectedDestination, TArray<FVector>& ValidatedArcPositions, TArray<FVector>& RemainingArcPositions,

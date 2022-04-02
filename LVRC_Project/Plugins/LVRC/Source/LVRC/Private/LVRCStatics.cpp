@@ -23,7 +23,7 @@ bool ULVRCStatics::PredictProjectilePathPointDrag(
 		FVector TraceStart = StartLocation;
 		FVector TraceEnd = TraceStart;
 		float CurrentTime = 0.f;
-		float SubstepDeltaTime = MaxSimTime / NumSubsteps;
+		const float SubstepDeltaTime = MaxSimTime / NumSubsteps;
 
 		while (CurrentTime < MaxSimTime)
 		{
@@ -33,7 +33,7 @@ bool ULVRCStatics::PredictProjectilePathPointDrag(
 			// Integrate (modified Velocity Verlet method, see https://web.physics.wustl.edu/~wimd/topic01.pdf)
 			TraceStart = TraceEnd;
 			FVector Acceleration = FVector(0.f, 0.f, GravityZ)
-				+ DragCoefficient * -CurrentVel.SizeSquared() * CurrentVel;
+				+ DragCoefficient * -CurrentVel.GetUnsafeNormal();
 			CurrentVel = CurrentVel + Acceleration * ActualStepDeltaTime;
 			TraceEnd = TraceStart + (CurrentVel * ActualStepDeltaTime)
 				+ (0.5 * Acceleration * ActualStepDeltaTime * ActualStepDeltaTime);

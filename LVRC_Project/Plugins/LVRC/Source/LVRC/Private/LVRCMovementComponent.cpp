@@ -4,6 +4,7 @@
 #include "LVRCMovementComponent.h"
 
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "LVRCStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -69,28 +70,35 @@ void ULVRCMovementComponent::UpdateCapsuleHeightToHMD() const
 	LVRCCharacterOwner->MatchVROriginOffsetToCapsuleHalfHeight();
 }
 
-void ULVRCMovementComponent::CalculateTeleportationParameters(FVector TraceStartPosition, FVector TraceStartDirection,
-	FVector& ValidatedDestination, FVector& ProjectedDestination, TArray<FVector>& ValidatedArcPositions,
-	TArray<FVector>& RemainingArcPositions, float& HeightAdjustmentRatio, TArray<FVector>& StepPositions,
-	bool& IsLethal) const
+void ULVRCMovementComponent::CalculateTeleportationParameters(
+	FVector TraceStartPosition, FVector TraceStartDirection, FVector& ValidatedDestination,
+	FVector& ProjectedDestination, TArray<FVector>& ValidatedArcPositions, TArray<FVector>& RemainingArcPositions,
+	float& HeightAdjustmentRatio, TArray<FVector>& StepPositions, bool& IsLethal) const
 {
 	checkSlow(bIsTeleporting);
 	checkSlow(TraceStartDirection.IsNormalized());
-	
+
 	// Limit the start direction to a maximum vertical angle
 	const float MaxAngleZ = FMath::Sin(TeleportArcMaxVerticalAngle);
 	TraceStartDirection.Z = FMath::Min(TraceStartDirection.Z, MaxAngleZ);
 	TraceStartDirection.Normalize();
-	
+
 	// Use tracing from the hand to choose a desired teleport destination
-	
-	
+	TArray<FVector> ArcTracePositions;
+	FHitResult ArcHit;
+	ULVRCStatics::PredictProjectilePathPointDrag(
+		ArcTracePositions, ArcHit, this, TraceStartPosition, TraceStartDirection * TeleportArcInitialSpeed,
+		LocomotionBlockingObjectTypes, {}, TeleportArcDragCoefficient, -98, TeleportArcMaxSimTime, TeleportArcNumSubsteps, false,
+		EDrawDebugTrace::Type::ForOneFrame);
+
+	ValidatedArcPositions = ArcTracePositions;
+
 	// Sweep a sphere upwards from the desired destination to a max height of the capsule height to determine the height
 	// the player would need to crouch to fit there
 	// TODO write a function to get the player's height which is HMD local Z position + eye to top of head distance and refactor the Set Capsule Height function with it before using it here
-	
+
 	// Run validation to find a validated teleportation destination as well as other things used for UI like the step path and maybe whether we're trying to jump into deadly fall or kill volume
-	
+
 	// Calculate other things needed for teleport UI 
 }
 
