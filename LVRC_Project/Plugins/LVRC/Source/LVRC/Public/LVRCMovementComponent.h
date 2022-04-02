@@ -38,7 +38,7 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	float CapsuleHeightOffset = 10.0f;
 
-	/** The maximum angle upwards you can point a teleport arc. */
+	/** The maximum angle upwards from the horizontal plane you can point a teleport arc. */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportArcMaxVerticalAngle = 35.0f;
 	

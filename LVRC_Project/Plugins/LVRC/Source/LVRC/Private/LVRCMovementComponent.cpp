@@ -79,9 +79,10 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	checkSlow(TraceStartDirection.IsNormalized());
 
 	// Limit the start direction to a maximum vertical angle
-	const float MaxAngleZ = FMath::Sin(FMath::DegreesToRadians(TeleportArcMaxVerticalAngle));
-	TraceStartDirection.Z = FMath::Min(TraceStartDirection.Z, MaxAngleZ);
-	TraceStartDirection.Normalize();
+	const float MinThetaRadians = FMath::DegreesToRadians(90.0f - TeleportArcMaxVerticalAngle);
+	FVector2D DirectionSpherical = TraceStartDirection.UnitCartesianToSpherical();
+	DirectionSpherical.X = FMath::Max(DirectionSpherical.X, MinThetaRadians); // Limit theta which goes from 0 (up) to pi (down)
+	TraceStartDirection = DirectionSpherical.SphericalToUnitCartesian();
 
 	// Use tracing from the hand to choose a desired teleport destination
 	TArray<FVector> ArcTracePositions;
