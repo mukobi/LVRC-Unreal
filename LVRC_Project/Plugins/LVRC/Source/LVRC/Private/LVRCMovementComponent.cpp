@@ -7,6 +7,7 @@
 #include "LVRCStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/KillZVolume.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 
@@ -71,36 +72,83 @@ void ULVRCMovementComponent::UpdateCapsuleHeightToHMD() const
 }
 
 void ULVRCMovementComponent::CalculateTeleportationParameters(
-	FVector TraceStartPosition, FVector TraceStartDirection, FVector& ValidatedDestination,
-	FVector& ProjectedDestination, TArray<FVector>& ValidatedArcPositions, TArray<FVector>& RemainingArcPositions,
-	float& HeightAdjustmentRatio, TArray<FVector>& StepPositions, bool& IsLethal) const
+	FVector TraceStartLocation, FVector TraceStartDirection, FVector& ValidatedGroundLocation,
+	FVector& ArcEndLocation, TArray<FVector>& ValidatedArcLocations, TArray<FVector>& RemainingArcLocations,
+	float& HeightAdjustmentRatio, TArray<FVector>& StepLocations, bool& bDropAfterArc, bool& bIsLethal) const
 {
-	checkSlow(bIsTeleporting);
-	checkSlow(TraceStartDirection.IsNormalized());
+	check(bIsTeleporting);
+	check(TraceStartDirection.IsNormalized());
+
+	EDrawDebugTrace::Type DrawDebugType = EDrawDebugTrace::Type::ForOneFrame;
 
 	// Limit the start direction to a maximum vertical angle
 	const float MinThetaRadians = FMath::DegreesToRadians(90.0f - TeleportArcMaxVerticalAngle);
 	FVector2D DirectionSpherical = TraceStartDirection.UnitCartesianToSpherical();
-	DirectionSpherical.X = FMath::Max(DirectionSpherical.X, MinThetaRadians); // Limit theta which goes from 0 (up) to pi (down)
+	DirectionSpherical.X = FMath::Max(DirectionSpherical.X, MinThetaRadians); // Theta goes from 0 (up) to pi (down)
 	TraceStartDirection = DirectionSpherical.SphericalToUnitCartesian();
 
-	// Use tracing from the hand to choose a desired teleport destination
-	TArray<FVector> ArcTracePositions;
+	// Use tracing in an arc from the hand to choose a desired teleport destination
+	TArray<FVector> ArcTraceLocations;
 	FHitResult ArcHit;
 	ULVRCStatics::PredictProjectilePathPointDrag(
-		ArcTracePositions, ArcHit, this, TraceStartPosition, TraceStartDirection * TeleportArcInitialSpeed,
-		LocomotionBlockingObjectTypes, {}, TeleportArcDampingFactor, -98, TeleportArcMaxSimTime, TeleportArcNumSubsteps, false,
-		EDrawDebugTrace::Type::ForOneFrame);
+		ArcTraceLocations, ArcHit, this, TraceStartLocation, TraceStartDirection * TeleportArcInitialSpeed,
+		LocomotionBlockingObjectTypes, {}, TeleportArcDampingFactor, -98, TeleportArcMaxSimTime, TeleportArcNumSubsteps,
+		false,
+		DrawDebugType);
+	ArcEndLocation = ArcTraceLocations[ArcTraceLocations.Num() - 1];
 
-	ValidatedArcPositions = ArcTracePositions;
+	// Handle arc pointing at a kill volume. Don't return early, because we might avoid this by stopping early at the
+	// ledge during step validation if we're far enough away from it. 
+	bIsLethal = ArcHit.Actor.IsValid() && ArcHit.Actor->IsA(AKillZVolume::StaticClass());
+	
+	// Determine if the arc's destination is somewhere we can stand
+	bDropAfterArc = !IsWalkable(ArcHit) && !bIsLethal;
+
+	FVector DesiredGroundLocation;
+	if (bDropAfterArc)
+	{
+		// Trace down from the arc end point and determine if it was a deadly drop
+		FVector PenultimateTracePosition = ArcTraceLocations[ArcTraceLocations.Num() - 2];
+		// Back up by a bit more than half the capsule radius
+		FVector BackUpDirection = (PenultimateTracePosition - ArcEndLocation);
+		BackUpDirection.Normalize();
+		ArcEndLocation += 0.51f * CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * BackUpDirection;
+		FVector TraceEnd = ArcEndLocation + FVector::DownVector * (MaxDropDistance -
+			(CharacterOwner->GetActorLocation().Z - ArcEndLocation.Z));
+		FHitResult DropHit;
+		UKismetSystemLibrary::LineTraceSingleForObjects(
+			this, ArcEndLocation, TraceEnd, LocomotionBlockingObjectTypes, false,
+			{}, DrawDebugType, DropHit, true);
+
+		if (!DropHit.bBlockingHit || (DropHit.Actor.IsValid() && DropHit.Actor->IsA(AKillZVolume::StaticClass())))
+		{
+			// Drop after arc would lead to death. However, don't return early, because we might avoid this by stopping
+			// early at the ledge during step validation if we're far enough away from it. 
+			bIsLethal = true;
+			DesiredGroundLocation = ArcEndLocation;
+		}
+		else
+		{
+			// Drop contacted the ground, will try to reach that point.
+			DesiredGroundLocation = DropHit.Location;
+		}
+	}
+	else
+	{
+		// Arc hit walkable ground 
+		DesiredGroundLocation = ArcEndLocation;
+	}
 
 	// Sweep a sphere upwards from the desired destination to a max height of the capsule height to determine the height
 	// the player would need to crouch to fit there
+	// TODO
 	// TODO write a function to get the player's height which is HMD local Z position + eye to top of head distance and refactor the Set Capsule Height function with it before using it here
 
 	// Run validation to find a validated teleportation destination as well as other things used for UI like the step path and maybe whether we're trying to jump into deadly fall or kill volume
+	ValidatedGroundLocation = DesiredGroundLocation; // TODO
+	ValidatedArcLocations = ArcTraceLocations; // TODO
 
-	// Calculate other things needed for teleport UI 
+	// Calculate other things needed for teleport UI
 }
 
 void ULVRCMovementComponent::PostLoad()

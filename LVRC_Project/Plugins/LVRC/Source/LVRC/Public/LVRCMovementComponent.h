@@ -38,6 +38,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	float CapsuleHeightOffset = 10.0f;
 
+	/** Drops greater than this distance are fatal. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float MaxDropDistance = 400.0f;
+	
 	/** The maximum angle upwards from the horizontal plane you can point a teleport arc. */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportArcMaxVerticalAngle = 35.0f;
@@ -71,23 +75,24 @@ public:
 	/**
 	 * @brief Calculate parameters for teleportation functionality/visualization. Implements advanced features like
 	 * path validation and partial movement for invalid arc destinations and drop-offs.
-	 * @param TraceStartPosition Position from which to start tracing the teleport arc.
+	 * @param TraceStartLocation Position from which to start tracing the teleport arc.
 	 * @param TraceStartDirection Direction from which to start tracing the teleport arc.
-	 * @param ValidatedDestination The destination that has been determined as valid for the player to teleport to.
-	 * @param ProjectedDestination The destination on the ground that just the teleportation arc wanted to get to.
-	 * @param ValidatedArcPositions Positions of the segmented arc leading up to and including the spot above the ValidatedDestination.
-	 * @param RemainingArcPositions Any remaining positions of the arc past the ValidatedDestination to the ProjectedDestination.
+	 * @param ValidatedGroundLocation The destination that has been determined as valid for the player to teleport to.
+	 * @param ArcEndLocation The last location the teleport arc traced to (not counting a drop after the arc).
+	 * @param ValidatedArcLocations Positions of the segmented arc leading up to and including the spot above the ValidatedDestination.
+	 * @param RemainingArcLocations Any remaining positions of the arc past the ValidatedDestination to the ProjectedDestination.
 	 * @param HeightAdjustmentRatio How much the player would have to crouch to fit vertically in the ProjectedDestination.
 	 * 0 represents the player's height fitting underneath the ceiling. Just above 0 is just barely intersecting.
 	 * 1 represents the current player height being double the ceiling height.
-	 * @param StepPositions The sequence of validated step ground positions leading to the ValidatedDestination.
-	 * @param IsLethal Whether this teleport would kill the play (i.e. from a fall or landing in a kill volume).
+	 * @param StepLocations The sequence of validated step ground positions leading to the ValidatedDestination.
+	 * @param bDropAfterArc Whether the arc didn't end on standable ground and had to simulate a drop after.
+	 * @param bIsLethal Whether this teleport would kill the play (i.e. from a fall or landing in a kill volume).
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure=false)
 	void CalculateTeleportationParameters(
-		FVector TraceStartPosition, FVector TraceStartDirection, FVector& ValidatedDestination,
-		FVector& ProjectedDestination, TArray<FVector>& ValidatedArcPositions, TArray<FVector>& RemainingArcPositions,
-		float& HeightAdjustmentRatio, TArray<FVector>& StepPositions, bool& IsLethal) const;
+		FVector TraceStartLocation, FVector TraceStartDirection, FVector& ValidatedGroundLocation,
+		FVector& ArcEndLocation, TArray<FVector>& ValidatedArcLocations, TArray<FVector>& RemainingArcLocations,
+		float& HeightAdjustmentRatio, TArray<FVector>& StepLocations, bool& bDropAfterArc, bool& bIsLethal) const;
 
 	// Interface Implementations
 
