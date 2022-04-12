@@ -100,19 +100,31 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	// Handle arc pointing at a kill volume. Don't return early, because we might avoid this by stopping early at the
 	// ledge during step validation if we're far enough away from it. 
 	bIsLethal = ArcHit.Actor.IsValid() && ArcHit.Actor->IsA(AKillZVolume::StaticClass());
-	
+
 	// Determine if the arc's destination is somewhere we can stand
 	bDropAfterArc = !IsWalkable(ArcHit) && !bIsLethal;
+
+	// 2D direction from player to desired destination
+	FVector TargetDirection2D = ArcEndLocation - LVRCCharacterOwner->GetVRCamera()->GetComponentLocation();
+	TargetDirection2D.Z = 0.0f;
+	TargetDirection2D.Normalize();
 
 	FVector DesiredGroundLocation;
 	if (bDropAfterArc)
 	{
+		// Back up by a bit more than the capsule radius if we hit an unwalkable surface (wall) so we can fit there.
+		if (ArcHit.IsValidBlockingHit())
+		{
+			// TODO fix this backing up. It should probably move away from the ArcHit surface by a bit more than the
+			// capsule radius * the hit normal, then project that point parallel to the hit surface onto the teleport
+			// arc to figure out how far along the teleport path is safe to go, then remove some of the elements from
+			// the teleport arc and shorten the last one s.t. the ArcEndLocation is a safely teleportable distance from
+			// the wall. Should write the projection-onto-arc stuff as a subroutine, as it's necessary for tele viz. 
+			FVector BackUpDirection = -TargetDirection2D;
+			ArcEndLocation += 1.01f * CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * BackUpDirection;
+		}
+
 		// Trace down from the arc end point and determine if it was a deadly drop
-		FVector PenultimateTracePosition = ArcTraceLocations[ArcTraceLocations.Num() - 2];
-		// Back up by a bit more than half the capsule radius
-		FVector BackUpDirection = (PenultimateTracePosition - ArcEndLocation);
-		BackUpDirection.Normalize();
-		ArcEndLocation += 0.51f * CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * BackUpDirection;
 		FVector TraceEnd = ArcEndLocation + FVector::DownVector * (MaxDropDistance -
 			(CharacterOwner->GetActorLocation().Z - ArcEndLocation.Z));
 		FHitResult DropHit;
@@ -144,11 +156,94 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	// TODO
 	// TODO write a function to get the player's height which is HMD local Z position + eye to top of head distance and refactor the Set Capsule Height function with it before using it here
 
-	// Run validation to find a validated teleportation destination as well as other things used for UI like the step path and maybe whether we're trying to jump into deadly fall or kill volume
+	// Run validation to find a validated teleportation destination as well as the step path
+	bool bStepsReachedDestination = false;
+	USceneComponent* VRCamera = LVRCCharacterOwner->GetVRCamera();
+	// Start steps at the position on the ground under the camera
+	FVector CurrentStepPosition = VRCamera->GetComponentLocation() - FVector(0, 0, VRCamera->GetRelativeLocation().Z);
+	FVector PreviousStepPosition = CurrentStepPosition;
+	FHitResult StepForwardHit, StepUpHit, StepDownHit;
+	float CapsuleRadius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * 0.5f; // TODO 0.2 debug
+	float CapsuleHalfHeight = 0.5f * TeleportStepCapsuleHeight * 0.5f; // TODO 0.2 debug
+	FVector CapsuleFloorOffset = FVector(0, 0, CapsuleHalfHeight);
+
+	// Take intermediate steps forward until we get stuck or pass the destination
+	StepLocations.Reset();
+	for (int i = 0; i < 30; i++)
+	{
+		// Limit step distance to the remaining distance to the destination
+		float StepToDestinationDistance2D = (DesiredGroundLocation - CurrentStepPosition).Size2D();
+		float StepForwardLengthRemaining = FMath::Min(TeleportStepLength, StepToDestinationDistance2D);
+
+		// Trace position is the center of the capsule, not the ground
+		FVector CapsuleCenterPosition = CurrentStepPosition + CapsuleFloorOffset;
+
+		// Step forward
+		FVector StartLocation = CapsuleCenterPosition;
+		FVector EndLocation = StartLocation + TargetDirection2D * StepForwardLengthRemaining;
+		UKismetSystemLibrary::CapsuleTraceSingleForObjects(
+			this, StartLocation, EndLocation, CapsuleRadius, CapsuleHalfHeight, LocomotionBlockingObjectTypes,
+			false, {}, DrawDebugType, StepForwardHit, true, FLinearColor(0, 1, 0), FLinearColor(0, 0.2f, 0));
+		CapsuleCenterPosition = StepForwardHit.bBlockingHit ? StepForwardHit.Location : EndLocation;
+
+		// Step up if didn't complete forward step
+		if (StepForwardHit.bBlockingHit)
+		{
+			// Step up
+			StartLocation = CapsuleCenterPosition - 1.0f * TargetDirection2D;
+			// Back up a bit to not hit the forward barrier again
+			EndLocation = StartLocation + FVector::UpVector * MaxStepHeight;
+			UKismetSystemLibrary::CapsuleTraceSingleForObjects(
+				this, StartLocation, EndLocation, CapsuleRadius, CapsuleHalfHeight, LocomotionBlockingObjectTypes,
+				false, {}, DrawDebugType, StepUpHit, true, FLinearColor(0, 0, 1), FLinearColor(0, 0, 0.2f));
+			CapsuleCenterPosition = StepUpHit.bBlockingHit ? StepUpHit.Location : EndLocation;
+
+			// Step forward again by any remaining amount
+			StartLocation = CapsuleCenterPosition;
+			EndLocation = StartLocation + TargetDirection2D * StepForwardLengthRemaining * (1.0f - StepForwardHit.Time);
+			UKismetSystemLibrary::CapsuleTraceSingleForObjects(
+				this, StartLocation, EndLocation, CapsuleRadius, CapsuleHalfHeight, LocomotionBlockingObjectTypes,
+				false, {}, DrawDebugType, StepForwardHit, true, FLinearColor(0, 1, 1),
+				FLinearColor(0, 0.2f, 0.2f));
+			CapsuleCenterPosition = StepForwardHit.bBlockingHit ? StepForwardHit.Location : EndLocation;
+		}
+
+		// Step down, including drops
+		StartLocation = CapsuleCenterPosition;
+		EndLocation = StartLocation + FVector::DownVector * MaxDropDistance + StepUpHit.Distance;
+		UKismetSystemLibrary::CapsuleTraceSingleForObjects(
+			this, StartLocation, EndLocation, CapsuleRadius, CapsuleHalfHeight, LocomotionBlockingObjectTypes,
+			false, {}, DrawDebugType, StepDownHit, true, FLinearColor(1.0f, 0, 0), FLinearColor(0.2f, 0, 0));
+		CapsuleCenterPosition = StepDownHit.bBlockingHit ? StepDownHit.Location : EndLocation;
+		CapsuleCenterPosition.Z += (MIN_FLOOR_DIST + MAX_FLOOR_DIST) * 0.5f; // Float a little above the floor
+
+		CurrentStepPosition = CapsuleCenterPosition - CapsuleFloorOffset;
+
+		// If didn't move since last step, we're done (blocked or reached the destination)
+		if ((CurrentStepPosition - PreviousStepPosition).IsNearlyZero(0.1f))
+		{
+			break;
+		}
+
+		StepLocations.Add(CurrentStepPosition);
+		PreviousStepPosition = CurrentStepPosition;
+	}
+
+	// Check backwards to find the last intermediate step that's a valid destination
+	// TODO
+	// Keep track of last valid as an int, then remove all at once from the end instead of removing within the loop
+
+	// Try to see if a jump is viable if steps didn't get us to the destination
+	if (!bStepsReachedDestination)
+	{
+		// Get player HMD height and trace from current HMD position to HMD position at the destination
+	}
+
+	// ValidatedGroundLocation = StepLocations[StepLocations.Num() - 1]; // TODO
 	ValidatedGroundLocation = DesiredGroundLocation; // TODO
 	ValidatedArcLocations = ArcTraceLocations; // TODO
 
-	// Calculate other things needed for teleport UI
+	// TODO Calculate other things needed for teleport UI
 }
 
 void ULVRCMovementComponent::PostLoad()

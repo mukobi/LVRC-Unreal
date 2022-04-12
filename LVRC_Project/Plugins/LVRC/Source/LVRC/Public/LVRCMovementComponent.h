@@ -42,6 +42,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float MaxDropDistance = 400.0f;
 	
+	/** Maximum height we can mantel up. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float MaxMantleHeight = 115.0f;
+	
 	/** The maximum angle upwards from the horizontal plane you can point a teleport arc. */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportArcMaxVerticalAngle = 35.0f;
@@ -61,6 +65,14 @@ public:
 	/** How many sub-steps to use in the simulation (chopping up TeleportArcMaxSimTime). */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	int TeleportArcNumSubsteps = 32;
+	
+	/** Unified intermediate height for teleport step validation. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float TeleportStepCapsuleHeight = 80.0f;
+	
+	/** Length of each step for teleport step validation. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float TeleportStepLength = 40.0f;
 
 	// BlueprintCallable Interface
 
