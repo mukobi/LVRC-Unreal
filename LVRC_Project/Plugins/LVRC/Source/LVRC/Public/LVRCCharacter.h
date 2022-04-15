@@ -30,6 +30,13 @@ private:
 	UCameraComponent* VRCamera;
 
 public:
+	// Settings //
+	
+	/** Offset from the HMD tracked position to use for the top of the capsule component. */
+	UPROPERTY(EditDefaultsOnly)
+	float CapsuleHeightOffset = 10.0f;
+
+public:
 	ALVRCCharacter(const FObjectInitializer& ObjectInitializer);
 
 	UFUNCTION(BlueprintCallable)
@@ -40,6 +47,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	ULVRCMovementComponent* GetLVRCMovementComponent() const;
+
+	/** Gets the height of the top of the player's head in tracking space (a little more than the HMD position). */
+	UFUNCTION(BlueprintPure)
+	float GetPlayerTopOfHeadHeight() const;
 
 	/** Updates the Z component of the VR origin to equal the negative capsule half height so it's on the ground. */
 	UFUNCTION(BlueprintCallable)

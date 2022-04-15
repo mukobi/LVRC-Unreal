@@ -34,10 +34,6 @@ public:
 public:
 	// Configurable Settings
 
-	/** Offset from the HMD tracked position to use for the top of the capsule component. */
-	UPROPERTY(EditDefaultsOnly)
-	float CapsuleHeightOffset = 10.0f;
-
 	/** Drops greater than this distance are fatal. */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float MaxDropDistance = 400.0f;

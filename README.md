@@ -10,6 +10,15 @@ TODO
 
 TODO
 
+## Usage
+
+TODO
+
+## Limitations
+- LVRC has not yet been tested for the following use cases, so it may need modification to accommodate them
+    - Networked multiplayer
+    - Non-unit-scaled player character
+
 
 ## Coding Style and Naming Conventions
 
@@ -22,6 +31,6 @@ Thanks to the following projects, groups, and people who made this possible:
 
 - [Valve Software](https://www.valvesoftware.com/en/) and the [Half-Life: Alyx](https://www.half-life.com/en/alyx) team
 - [Nimso Ny](https://www.youtube.com/user/nimsony) for [analysing many of Alyx's mechanics](https://www.youtube.com/playlist?list=PLoLkfS-a4sd3U8DRe89ndDBUfzr4tDUdS)
-- https://github.com/ProjectBorealis/UEGitPlugin for locking VCS within Unreal
+- https://github.com/ProjectBorealis/UEGitPlugin for locking Git VCS within Unreal
 - [Epic Games](https://www.epicgames.com) and the [Unreal Engine](https://www.unrealengine.com)
 - [Stanford XR](https://www.stanfordxr.org/)
