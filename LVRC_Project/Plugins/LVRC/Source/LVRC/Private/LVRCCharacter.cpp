@@ -33,12 +33,22 @@ ULVRCMovementComponent* ALVRCCharacter::GetLVRCMovementComponent() const
 	return Cast<ULVRCMovementComponent>(GetMovementComponent());
 }
 
-float ALVRCCharacter::GetPlayerTopOfHeadHeight() const
+FVector ALVRCCharacter::GetPlayerEyeWorldLocation() const
+{
+	return VRCamera->GetComponentLocation();
+}
+
+float ALVRCCharacter::GetPlayerEyeHeight() const
 {
 	FRotator HMDRotation;
 	FVector HMDPosition;
 	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(HMDRotation, HMDPosition);
-	return HMDPosition.Z + CapsuleHeightOffset;
+	return HMDPosition.Z;
+}
+
+float ALVRCCharacter::GetPlayerTopOfHeadHeight() const
+{
+	return GetPlayerEyeHeight() + CapsuleHeightOffset;
 }
 
 void ALVRCCharacter::MatchVROriginOffsetToCapsuleHalfHeight()

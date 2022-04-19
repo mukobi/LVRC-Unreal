@@ -70,6 +70,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportStepLength = 40.0f;
 
+	/** Distance from the teleport arc destination to consider intermediate steps as having reached the destination. */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float TeleportDestinationReachedThreshold = 15.0f;
+
 	// BlueprintCallable Interface
 
 	/** Updates the capsule component's position as well as the position of the HMD (camera) to be in sync. */
@@ -95,7 +99,7 @@ public:
 	 * @param StepLocations The sequence of validated step ground positions leading to the ValidatedDestination.
 	 * @param bDropAfterArc Whether the arc didn't end on standable ground and had to simulate a drop after.
 	 * @param bIsLethal Whether this teleport would kill the play (i.e. from a fall or landing in a kill volume).
-	 */
+	 */	
 	UFUNCTION(BlueprintCallable, BlueprintPure=false)
 	void CalculateTeleportationParameters(
 		FVector TraceStartLocation, FVector TraceStartDirection, FVector& ValidatedGroundLocation,

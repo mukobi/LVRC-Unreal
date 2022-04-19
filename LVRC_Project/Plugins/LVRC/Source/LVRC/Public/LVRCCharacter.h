@@ -48,6 +48,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	ULVRCMovementComponent* GetLVRCMovementComponent() const;
 
+	/** Gets the location of the player's eye-center in world space (world HMD position). */
+	UFUNCTION(BlueprintPure)
+	FVector GetPlayerEyeWorldLocation() const;
+	
+	/** Gets the height of the player's eye-center in tracking space (local HMD position). */
+	UFUNCTION(BlueprintPure)
+	float GetPlayerEyeHeight() const;
+	
 	/** Gets the height of the top of the player's head in tracking space (a little more than the HMD position). */
 	UFUNCTION(BlueprintPure)
 	float GetPlayerTopOfHeadHeight() const;
@@ -62,7 +70,7 @@ protected:
 
 protected:
 	// APawn interface
-	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 };
 
