@@ -73,6 +73,10 @@ public:
 	/** Distance from the teleport arc destination to consider intermediate steps as having reached the destination. */
 	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
 	float TeleportDestinationReachedThreshold = 15.0f;
+	
+	/** If under this distance from a ledge, assume the player wants to jump down the ledge (potentially to their death). */
+	UPROPERTY(EditDefaultsOnly, Category="Teleportation")
+	float TeleportLedgeClosenessThreshold = 200.0f;
 
 	// BlueprintCallable Interface
 

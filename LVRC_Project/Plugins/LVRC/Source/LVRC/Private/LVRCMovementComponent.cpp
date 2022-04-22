@@ -78,9 +78,10 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	check(bIsTeleporting);
 	check(TraceStartDirection.IsNormalized());
 
-	// TODO make different versions of these and turn off step capsule and probably head trace
-	// or maybe just 2 categories: important and verbose?
-	EDrawDebugTrace::Type StepCapsuleDrawDebugType = EDrawDebugTrace::Type::ForOneFrame;
+	constexpr EDrawDebugTrace::Type ArcDrawDebugType = EDrawDebugTrace::Type::ForOneFrame;
+	constexpr EDrawDebugTrace::Type StepCapsuleDrawDebugType = EDrawDebugTrace::Type::None;
+	constexpr EDrawDebugTrace::Type DestinationValidationDrawDebugType = EDrawDebugTrace::Type::None;
+	constexpr EDrawDebugTrace::Type LOSDrawDebugType = EDrawDebugTrace::Type::None;
 
 	// Precompute some things
 	FVector EyeWorldLocation = LVRCCharacterOwner->GetPlayerEyeWorldLocation();
@@ -90,6 +91,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	float PlayerCapsuleRadius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
 	float StepCapsuleHalfHeight = 0.5f * TeleportStepCapsuleHeight;
 	FVector StepCapsuleFloorOffset = FVector(0, 0, StepCapsuleHalfHeight);
+	float CapsuleFloatHeight = (MIN_FLOOR_DIST + MAX_FLOOR_DIST) * 0.5f;
 
 	// Limit the start direction to a maximum vertical angle
 	const float MinThetaRadians = FMath::DegreesToRadians(90.0f - TeleportArcMaxVerticalAngle);
@@ -104,7 +106,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 		ArcTraceLocations, ArcHit, this, TraceStartLocation, TraceStartDirection * TeleportArcInitialSpeed,
 		LocomotionBlockingObjectTypes, {}, TeleportArcDampingFactor, -98, TeleportArcMaxSimTime, TeleportArcNumSubsteps,
 		false,
-		StepCapsuleDrawDebugType);
+		ArcDrawDebugType);
 	ArcEndLocation = ArcTraceLocations[ArcTraceLocations.Num() - 1];
 
 	// Handle arc pointing at a kill volume. Don't return early, because we might avoid this by stopping early at the
@@ -144,7 +146,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 		FHitResult DropHit;
 		UKismetSystemLibrary::LineTraceSingleForObjects(
 			this, ArcEndLocation, TraceEnd, LocomotionBlockingObjectTypes, false,
-			{}, StepCapsuleDrawDebugType, DropHit, true);
+			{}, ArcDrawDebugType, DropHit, true);
 
 		if (!DropHit.bBlockingHit || (DropHit.Actor.IsValid() && DropHit.Actor->IsA(AKillZVolume::StaticClass())))
 		{
@@ -167,7 +169,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 
 	// Sweep a sphere upwards from the desired destination to a max height of the capsule height to determine the height
 	// the player would need to crouch to fit there
-	// TODO
+	// TODO implement this for teleport UI
 
 	// Run validation to find a validated teleportation destination as well as the step path
 	USceneComponent* VRCamera = LVRCCharacterOwner->GetVRCamera();
@@ -178,12 +180,17 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	FHitResult GroundStepForwardHit, StepUpHit, AirStepForwardHit, StepDownHit;
 
 	// Take intermediate steps forward until we get stuck or pass the destination
+	bool bStepsIncludeDrop = false;
 	StepLocations.Reset();
 	for (int i = 0; i < 30; i++)
 	{
 		// Limit step distance to the remaining distance to the destination
 		float StepToDestinationDistance2D = (DesiredGroundLocation - CurrentStepPosition).Size2D();
 		float StepForwardLengthRemaining = FMath::Min(TeleportStepLength, StepToDestinationDistance2D);
+
+		// TODO refactor the following loop body out into some stepping routine taking the height, forward amount, and
+		// downward amount. Try a normal step, but if the normal step ends up in the same location, try a mantle which
+		// is a higher vertical step with much smaller forward step. Might refactor the mantel part out into its own function.
 
 		// Trace position is the center of the capsule, not the ground
 		FVector CapsuleCenterLocation = CurrentStepPosition + StepCapsuleFloorOffset;
@@ -231,12 +238,14 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 		if (!StepDownHit.bBlockingHit)
 		{
 			// This step would have been a lethal fall, don't include it
+			bStepsIncludeDrop = true;
 			break;
 		}
 
 		if (IsWalkable(StepDownHit))
 		{
 			CapsuleCenterLocation = StepDownHit.Location;
+			CapsuleCenterLocation.Z += CapsuleFloatHeight; // Float a little above the floor
 		}
 		else
 		{
@@ -244,8 +253,10 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 			CapsuleCenterLocation = GroundStepForwardHit.Location;
 		}
 
-		// TODO fix some bug that results in incremental climbing due to this
-		CapsuleCenterLocation.Z += (MIN_FLOOR_DIST + MAX_FLOOR_DIST) * 0.5f; // Float a little above the floor
+		// Distance check to fix incremental climbing when stuck in front of a vertical surface
+		// if (FVector::DistSquared2D(CapsuleCenterLocation, StartingCapsuleCenterLocation) > KINDA_SMALL_NUMBER)
+		// {
+		// }
 
 		CurrentStepPosition = CapsuleCenterLocation - StepCapsuleFloorOffset;
 
@@ -255,29 +266,37 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 			break;
 		}
 
+		// Detect if we've dropped (stepped down more than the mantel height)
+		if (PreviousStepPosition.Z - CurrentStepPosition.Z > MaxMantleHeight)
+		{
+			bStepsIncludeDrop = true;
+		}
+
 		StepLocations.Add(CurrentStepPosition);
 		PreviousStepPosition = CurrentStepPosition;
 	}
 
 	// Check backwards to find the last intermediate step that's a valid destination
 	int LastValidStepIndex;
-	bool bPartialMovementLedge = false;
+	bool bPartialMovementLedge = bIsLethal;
 	for (LastValidStepIndex = StepLocations.Num() - 1; LastValidStepIndex >= 0; LastValidStepIndex--)
 	{
 		FVector StepLocation = StepLocations[LastValidStepIndex];
 		
-		// Partial movement at ledges: If you can't see where your head would be at the destination, don't go there
-		// TODO better detect this, perhaps by first checking if a step dropped by more than the mantle height above
-		// to mark this frame as having a drop then tracing to the feet or to the feet and the head position here
-		FVector TraceStart = EyeWorldLocation;
-		FVector TraceEnd = StepLocation + FVector::UpVector * PlayerEyeHeight;
-		FHitResult LOSTraceHit;
-		UKismetSystemLibrary::LineTraceSingleForObjects(this, TraceStart, TraceEnd, LocomotionBlockingObjectTypes, false, {}, StepCapsuleDrawDebugType, LOSTraceHit, true, FLinearColor(0,0.8f,1.0f), FLinearColor::Red);
-		if (LOSTraceHit.bBlockingHit)
+		// Partial movement at ledges: If you can't see where your body would be after a drop, don't go there
+		if (bStepsIncludeDrop)
 		{
-			// Can't see destination, this is not a viable destination
-			bPartialMovementLedge = true;
-			continue;
+			FVector TraceStart = EyeWorldLocation;
+			// TODO maybe try tracing to the feet or feet and head instead of the center of the body
+			FVector TraceEnd = StepLocation + FVector::UpVector * PlayerTopOfHeadHalfHeight;
+			FHitResult LOSTraceHit;
+			UKismetSystemLibrary::LineTraceSingleForObjects(this, TraceStart, TraceEnd, LocomotionBlockingObjectTypes, false, {}, LOSDrawDebugType, LOSTraceHit, true, FLinearColor(0,0.8f,1.0f), FLinearColor::Red);
+			if (LOSTraceHit.bBlockingHit)
+			{
+				// Can't see destination, this is not a viable destination
+				bPartialMovementLedge = true;
+				continue;
+			}
 		}
 		
 		// If the full player capsule can't fit here, the step is invalid
@@ -285,13 +304,15 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 		FHitResult FullPlayerHit;
 		UKismetSystemLibrary::CapsuleTraceSingleForObjects(
 			this, CapsuleCenterLocation, CapsuleCenterLocation, PlayerCapsuleRadius, PlayerTopOfHeadHalfHeight,
-			LocomotionBlockingObjectTypes, false, {}, StepCapsuleDrawDebugType, FullPlayerHit,
+			LocomotionBlockingObjectTypes, false, {}, DestinationValidationDrawDebugType, FullPlayerHit,
 			true, FLinearColor(0.4f, 0.4f, 0.4f), FLinearColor(0.4f, 0, 0));
 		if (!FullPlayerHit.bBlockingHit)
 		{
 			// Player capsule fits here, so this is a valid location
 			// TODO maybe also try a line trace from the center of the bottom of the capsule down to make sure this
 			// capsule center is on the ground.
+			// EDIT: I think this is probably unnecessary. EDIT 2: Maybe this is necessary if we do the incremental
+			// stepping up to the ledge in the below if block
 			break;
 		}
 	}
@@ -299,7 +320,8 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 	// Remove invalid steps all at once from the end
 	StepLocations.RemoveAt(LastValidStepIndex + 1, StepLocations.Num() - LastValidStepIndex - 1, false);
 
-	// TODO If partially moved due to ledges, nudge this step up to the edge
+	// TODO If partially moved due to ledges, nudge this step up to the edge by a series of TouchingGround line traces
+	// (maybe binary search?) then capsule body tracing to check the body fits there again 
 	if(bPartialMovementLedge)
 	{
 		
@@ -317,28 +339,28 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 		ValidatedGroundLocation = StepLocations.Last();
 	
 		bStepsReachedDestination = (ValidatedGroundLocation - DesiredGroundLocation).SizeSquared()
-			< TeleportDestinationReachedThreshold * TeleportDestinationReachedThreshold;
+			< TeleportStepLength * TeleportStepLength * 1.25f;
 
 		if (!bStepsReachedDestination)
 		{
 			// Sweep forward with the full player capsule to get us right up to the wall
 			FHitResult FullPlayerHit;
-			FVector CapsuleCenterLocation = ValidatedGroundLocation + FVector::UpVector * PlayerTopOfHeadHalfHeight;
-			// TODO specific end location to fix this
+			FVector CapsuleCenterStartLocation = ValidatedGroundLocation + FVector::UpVector * PlayerTopOfHeadHalfHeight;
+			FVector CapsuleCenterEndLocation = CapsuleCenterStartLocation + TargetDirection2D * TeleportStepLength;
 			UKismetSystemLibrary::CapsuleTraceSingleForObjects(
-				this, CapsuleCenterLocation, CapsuleCenterLocation, PlayerCapsuleRadius, PlayerTopOfHeadHalfHeight,
-				LocomotionBlockingObjectTypes, false, {}, StepCapsuleDrawDebugType, FullPlayerHit,
+				this, CapsuleCenterStartLocation, CapsuleCenterEndLocation, PlayerCapsuleRadius, PlayerTopOfHeadHalfHeight,
+				LocomotionBlockingObjectTypes, false, {}, DestinationValidationDrawDebugType, FullPlayerHit,
 				true, FLinearColor(0.9f, 0.9f, 0.9f), FLinearColor(0.9f, 0, 0));
 
 			if (FullPlayerHit.IsValidBlockingHit())
 			{
 				// Line trace to check if this swept destination is on the same ground
 				// NOTE maybe we binary search or linearly test for the edge with many traces?
-				float TraceLength = 5.0f;
-				FVector TraceStart = ValidatedGroundLocation + FVector::UpVector * 0.5f * TraceLength;
-				FVector TraceEnd = TraceStart + FVector::DownVector * TraceLength;
+				float TouchingGroundTraceLength = 5.0f;
+				FVector TraceStart = ValidatedGroundLocation + FVector::UpVector * 0.5f * TouchingGroundTraceLength;
+				FVector TraceEnd = TraceStart + FVector::DownVector * TouchingGroundTraceLength;
 				FHitResult GroundTraceHit;
-				UKismetSystemLibrary::LineTraceSingleForObjects(this, TraceStart, TraceEnd, LocomotionBlockingObjectTypes, false, {}, StepCapsuleDrawDebugType, FullPlayerHit, true);
+				UKismetSystemLibrary::LineTraceSingleForObjects(this, TraceStart, TraceEnd, LocomotionBlockingObjectTypes, false, {}, DestinationValidationDrawDebugType, FullPlayerHit, true);
 				if (GroundTraceHit.IsValidBlockingHit())
 				{
 					ValidatedGroundLocation = FullPlayerHit.Location;
@@ -347,38 +369,44 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 		}
 	}
 
+	// TODO don't try a jump if steps got us close enough (maybe increase destination reached threshold to a bit more than step distance?)
+	
+	// TODO maybe we only need to jump if some of the steps fell down (since we can mantel up to jumpable areas without gaps)
+	
 	// Try to see if a jump is viable if steps didn't get us to the destination
-	// TODO don't jump if a lethal fall unless we didn't do partial movement because you're close enough to the ledge
-	if (!bStepsReachedDestination)
+	// Don't jump if a lethal fall unless we didn't do partial movement because you're close enough to the ledge
+	bool bCloseToLedge = FVector::DistSquared2D(ValidatedGroundLocation, EyeWorldLocation)
+		< TeleportLedgeClosenessThreshold * TeleportLedgeClosenessThreshold;
+	if (!bStepsReachedDestination && (!bIsLethal || bCloseToLedge))
 	{
-		// If player doesn't have LOS to eye location at destination, jump is invalid
+		// TODO also check LOS for head position at jump destination (add another trace)
+		// If player doesn't have LOS to destination location, jump is invalid
 		FVector TraceStart = EyeWorldLocation;
-		FVector TraceEnd = DesiredGroundLocation + FVector::UpVector * PlayerEyeHeight;
+		FVector TraceEnd = DesiredGroundLocation + FVector::UpVector * CapsuleFloatHeight;
 		FHitResult LOSTraceHit;
-		UKismetSystemLibrary::LineTraceSingleForObjects(this, TraceStart, TraceEnd, LocomotionBlockingObjectTypes, false, {}, StepCapsuleDrawDebugType, LOSTraceHit, true);
+		UKismetSystemLibrary::LineTraceSingleForObjects(this, TraceStart, TraceEnd, LocomotionBlockingObjectTypes, false, {}, LOSDrawDebugType, LOSTraceHit, true);
 		if (!LOSTraceHit.bBlockingHit)
 		{
-			// If the full player capsule doesn't fit in destination, jump is invalid
-			// TODO use TeleportTo with bIsTest to nudge capsule out of blocking (e.g. if DesiredGroundLocation is too close to a wall
-			FVector CapsuleCenterLocation = DesiredGroundLocation + FVector::UpVector * PlayerTopOfHeadHalfHeight;
-			FHitResult FullPlayerHit;
-			UKismetSystemLibrary::CapsuleTraceSingleForObjects(
-				this, CapsuleCenterLocation, CapsuleCenterLocation, PlayerCapsuleRadius, PlayerTopOfHeadHalfHeight,
-				LocomotionBlockingObjectTypes, false, {}, StepCapsuleDrawDebugType, FullPlayerHit,
-				true, FLinearColor(0.7f, 1.0f, 0.4f), FLinearColor(0.4f, 0, 0));
-			if (!FullPlayerHit.bBlockingHit)
+			// TODO maybe nudge location by normal to hit so the jump destination is more regularly chosen
+			// If the full player capsule doesn't fit in destination, jump is invalid. Use FindTeleportSpot to
+			// nudge capsule out of blocking geometry (e.g. if DesiredGroundLocation is too close to a wall).
+			FVector CapsuleCenterDestinationLocation = DesiredGroundLocation
+				+ FVector::UpVector * (PlayerTopOfHeadHalfHeight + CapsuleFloatHeight);
+			if (GetWorld()->FindTeleportSpot(CharacterOwner, CapsuleCenterDestinationLocation, CharacterOwner->GetActorRotation()))
 			{
-				// Player capsule fits here, so this is a valid location
-				ValidatedGroundLocation = DesiredGroundLocation;
+				// Player capsule fits here, so this is a valid jump location
+				ValidatedGroundLocation = CapsuleCenterDestinationLocation + FVector::DownVector * PlayerTopOfHeadHalfHeight;
+				StepLocations.Empty();
 			}
 		}
 	}
 
-	ValidatedArcLocations = ArcTraceLocations; // TODO
-
 	// TODO Calculate other things needed for teleport UI
+	
 	// TODO project ValidatedGroundLocation onto the arc based on 2D distance from camera
+	
 	// TODO split ArcTraceLocations into validated and invalidated segments
+	ValidatedArcLocations = ArcTraceLocations; // TODO
 }
 
 void ULVRCMovementComponent::PostLoad()
