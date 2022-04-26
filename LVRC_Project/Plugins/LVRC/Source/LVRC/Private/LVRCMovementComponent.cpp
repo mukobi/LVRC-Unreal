@@ -356,7 +356,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 			{
 				// Line trace to check if this swept destination is on the same ground
 				// NOTE maybe we binary search or linearly test for the edge with many traces?
-				float TouchingGroundTraceLength = 5.0f;
+				float TouchingGroundTraceLength = 5.0f; // TODO might need to be higher because of floating height
 				FVector TraceStart = ValidatedGroundLocation + FVector::UpVector * 0.5f * TouchingGroundTraceLength;
 				FVector TraceEnd = TraceStart + FVector::DownVector * TouchingGroundTraceLength;
 				FHitResult GroundTraceHit;
