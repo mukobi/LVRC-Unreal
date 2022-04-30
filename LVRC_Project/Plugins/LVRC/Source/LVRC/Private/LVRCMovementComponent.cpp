@@ -111,7 +111,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 
 	// Handle arc pointing at a kill volume. Don't return early, because we might avoid this by stopping early at the
 	// ledge during step validation if we're far enough away from it. 
-	bIsLethal = ArcHit.Actor.IsValid() && ArcHit.Actor->IsA(AKillZVolume::StaticClass());
+	bIsLethal = ArcHit.GetActor() && ArcHit.GetActor()->IsA(AKillZVolume::StaticClass());
 
 	// Determine if the arc's destination is somewhere we can stand
 	bDropAfterArc = !IsWalkable(ArcHit) && !bIsLethal;
@@ -148,7 +148,7 @@ void ULVRCMovementComponent::CalculateTeleportationParameters(
 			this, ArcEndLocation, TraceEnd, LocomotionBlockingObjectTypes, false,
 			{}, ArcDrawDebugType, DropHit, true);
 
-		if (!DropHit.bBlockingHit || (DropHit.Actor.IsValid() && DropHit.Actor->IsA(AKillZVolume::StaticClass())))
+		if (!DropHit.bBlockingHit || (DropHit.GetActor() && DropHit.GetActor()->IsA(AKillZVolume::StaticClass())))
 		{
 			// Drop after arc would lead to death. However, don't return early, because we might avoid this by stopping
 			// early at the ledge during step validation if we're far enough away from it. 
